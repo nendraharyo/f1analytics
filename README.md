@@ -86,7 +86,10 @@ Then take a look into the `scripts` and `notebooks` folders.
 ├── models                  <- Trained and serialized models, model predictions,
 │                              or model summaries.
 ├── notebooks               <- Jupyter notebooks. Naming convention is a number (for
-│                              ordering), the creator's initials and a description,
+│   │                          ordering), the creator's initials and a description,
+│   │                          e.g. `1.0-fw-initial-data-exploration`.
+│   ├── exploration         <- Notebooks that is designed for exploration, POC and use cases. Also function designs
+│   ├── interim             <- Final formatted notebooks that are ready for presentation or to report
 │                              e.g. `1.0-fw-initial-data-exploration`.
 ├── pyproject.toml          <- Build configuration. Don't change! Use `pip install -e .`
 │                              to install for development or to build `tox -e build`.
