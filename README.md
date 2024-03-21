@@ -11,9 +11,9 @@
 
 # f1analytics
 
-> Add a short description here!
+> an end to end, Formula 1 analysis portofolio project
 
-A longer description of your project goes here...
+[WIP]
 
 ## Installation
 
