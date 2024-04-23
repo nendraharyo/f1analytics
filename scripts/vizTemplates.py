@@ -14,7 +14,7 @@ from sklearn.cluster import DBSCAN
 from sklearn.preprocessing import StandardScaler
 
 fastf1.plotting.setup_mpl()
-
+fastf1.logger.set_log_level("ERROR")
 # mendefinisikan fungsi
 
 
