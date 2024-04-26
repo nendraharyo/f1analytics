@@ -1,4 +1,5 @@
 import math
+from datetime import timedelta
 
 import fastf1
 import fastf1.plotting
@@ -61,8 +62,8 @@ def rotate(xy, *, angle):  # melakukan proses rotasi matriks numpy
     return np.matmul(xy, rot_mat)
 
 
-def getFastestQualiTelemetry(session):
-    fastest_quali = pd.DataFrame()
+def getFastestTelemetry(session):
+    fastest = pd.DataFrame()
     for drv in session.drivers:
         df_temp = pd.DataFrame(
             session.laps.pick_driver(drv)
@@ -74,8 +75,8 @@ def getFastestQualiTelemetry(session):
         df_temp["drvName"] = session.get_driver(drv).Abbreviation
         df_temp["teamName"] = session.get_driver(drv).TeamName
         df_temp["teamColor"] = "#" + session.get_driver(drv).TeamColor
-        fastest_quali = pd.concat([fastest_quali, df_temp])
-    return fastest_quali
+        fastest = pd.concat([fastest, df_temp])
+    return fastest
 
 
 def getAvgvMinLaptimeClusters(session, epsVar=0.44, min_samp=4):
@@ -150,7 +151,7 @@ def gettrackSegmentsDataQuali(laps_telem, session, segments=25):
     return listProp, single_lap
 
 
-def getAllQualiTelemetry(session, segments=25):
+def getAllTelemetry(session, segments=25):
     drvLaps = session.laps[["DriverNumber", "LapNumber"]].groupby("DriverNumber").max()
     all_quali = pd.DataFrame()
     for drv in session.drivers:
@@ -243,8 +244,8 @@ def getFastAgg(all_quali, session):
 class vizDataQuali:
     def __init__(self, session):
         self.session = session
-        self.fastest_quali = getFastestQualiTelemetry(session)
-        self.all_quali = getAllQualiTelemetry(session)
+        self.fastest_quali = getFastestTelemetry(session)
+        self.all_quali = getAllTelemetry(session)
         self.circInfo = session.get_circuit_info()
 
     def quadrantAnalysis(self):
@@ -575,4 +576,248 @@ class vizDataQuali:
         # handles = [plt.Rectangle((0, 0), 1, 1, color=colors[label]) for label in labels]
         # fig.legend(handles, labels)
         fig.tight_layout()
+        plt.show()
+
+
+def session_corrected(session):
+    laps_corrected = pd.DataFrame()
+    for drv in session.drivers:
+        df = (
+            (session.laps.pick_driver(drv)["LapNumber"] - 1)
+            * (101 / session.total_laps)
+            * 35
+        )
+
+        df[:] = df[::-1]
+        df = df.apply(lambda x: timedelta(milliseconds=x))
+
+        laps = pd.DataFrame(session.laps.pick_driver(drv))
+        laps["fuel_corrected_laptime"] = (laps["LapTime"]) - df
+
+        laps_corrected = pd.concat([laps_corrected, laps])
+    return laps_corrected
+
+
+def getSessionTyreUsage(session_corrected):
+    session_tyre = session_corrected[
+        [
+            "Driver",
+            "DriverNumber",
+            "LapNumber",
+            "Compound",
+            "TyreLife",
+            "Stint",
+            "FreshTyre",
+        ]
+    ]
+    session_tyre = session_tyre.drop(session_tyre[session_tyre["LapNumber"] < 2].index)
+    session_tyre = (
+        session_tyre.groupby(
+            ["Driver", "DriverNumber", "Compound", "Stint", "FreshTyre"]
+        )
+        .agg({"LapNumber": "count", "TyreLife": "max"})
+        .sort_values(by=["Driver", "DriverNumber", "Stint"])
+        .reset_index()
+    )
+    tyregroup = session_tyre[["Driver", "Compound", "TyreLife"]].groupby("Compound")
+    tyreAlphas = pd.Series()
+    for i, group in tyregroup:
+        alphas = group["TyreLife"]
+        tyreAlphas = pd.concat(
+            [
+                tyreAlphas,
+                (alphas - (alphas.min() - 2)) / (alphas.max() - (alphas.min() - 2)),
+            ]
+        )
+    session_tyre = session_tyre.merge(
+        pd.DataFrame(tyreAlphas), left_index=True, right_index=True
+    ).rename(columns={0: "alpha"})
+    return session_tyre
+
+
+class vizDataRace:
+    def __init__(self, session):
+        self.session = session
+        self.session_corrected = session_corrected(session)
+        self.fastest_quali = getFastestTelemetry(session)
+        self.all_quali = getAllTelemetry(session)
+        self.circInfo = session.get_circuit_info()
+        self.tyre_usage = getSessionTyreUsage(session_corrected)
+
+    def TyreStrats(self):
+        fig, ax = plt.subplots(figsize=(5, 10))
+        for driver in self.session.drivers:
+            driver_stints = self.session_tyre.loc[
+                self.session_tyre["DriverNumber"] == driver
+            ]
+
+            previous_stint_end = 0
+            for idx, row in driver_stints.iterrows():
+                # each row contains the compound name and stint length
+                # we can use these information to draw horizontal bars
+
+                bars = ax.barh(
+                    y=row["Driver"],
+                    width=row["LapNumber"],
+                    left=previous_stint_end,
+                    color=fastf1.plotting.COMPOUND_COLORS[row["Compound"]],
+                    edgecolor="black",
+                    fill=True,
+                    label=row["Compound"],
+                    alpha=row["alpha"],
+                )
+
+                ax.bar_label(bars, label_type="center", color="black")
+
+                previous_stint_end += row["LapNumber"]
+
+        ax.invert_yaxis()
+        tyres = pd.DataFrame(fastf1.plotting.COMPOUND_COLORS, index=[0]).T.reset_index(
+            names="Compound"
+        )
+        tyresLegend = tyres[tyres["Compound"].isin(self.session_tyre["Compound"])]
+        colors = tyresLegend.set_index("Compound").to_dict()[0]
+        labels = list(colors.keys())
+        handles = [plt.Rectangle((0, 0), 1, 1, color=colors[label]) for label in labels]
+        ax.legend(handles, labels)
+
+        ax.set_xlabel("Lap ke -")
+        ax.set_ylabel("Pebalap")
+
+        fig.suptitle("         Strategi Ban Sepanjang Balapan", fontsize=15)
+        ax.set_title(
+            "(warna makin terang menunjukkan penggunaan ban makin panjang)",
+            fontsize=6.5,
+        )
+        fig.tight_layout()
+        # fig.legend(driver_stints['Compound'].unique())
+        plt.show()
+
+    def TyrePace(self, drvList):
+        pits = self.session_corrected[
+            (self.session_corrected["Driver"].isin(drvList))
+            & (session_corrected["LapNumber"] > 1)
+        ]  #
+        pits_adjusted = pits[
+            (pits["IsAccurate"] is True)
+            & (pits["LapTime"] < timedelta(minutes=2, seconds=0))
+        ]
+
+        fig, ax = plt.subplots(2, 1, sharey=True, sharex=True, figsize=(12, 5))
+        for i, row in pits_adjusted.iterrows():
+            if row["Compound"] == "MEDIUM":
+                ax[0].scatter(
+                    row["LapNumber"],
+                    row["fuel_corrected_laptime"],
+                    color="#" + self.session.get_driver(row["DriverNumber"]).TeamColor,
+                    alpha=0.2,
+                )
+            if row["Compound"] == "HARD":
+                ax[1].scatter(
+                    row["LapNumber"],
+                    row["fuel_corrected_laptime"],
+                    color="#" + self.session.get_driver(row["DriverNumber"]).TeamColor,
+                    alpha=0.2,
+                )
+        ax[0].set_title("MEDIUM", color="yellow", fontsize=10)
+        ax[1].set_xlabel("Lap ke-")
+        fig.text(-0.01, 0.23, "Waktu per Lap dengan koreksi bahan bakar", rotation=90)
+        ax[1].set_title("HARD", fontsize=10)
+        stintgroups = pits_adjusted[
+            [
+                "Stint",
+                "Compound",
+                "fuel_corrected_laptime",
+                "LapNumber",
+                "Driver",
+                "Team",
+            ]
+        ].groupby(["Compound", "Driver", "Stint", "Team"])
+        drvCache = []
+        for i, group in stintgroups:
+            if i[1] in drvCache:
+                labelVar = ""
+            else:
+                labelVar = i[1]
+                drvCache.append(i[1])
+            if i[4] == 1:
+                linestyleVar = "-"
+            else:
+                linestyleVar = ":"
+            # xx = np.linspace(min(group['fuel_corrected_laptime']),max(group['fuel_corrected_laptime']), 100)
+            y = group["fuel_corrected_laptime"].apply(lambda x: x.total_seconds())
+            a, b = np.polyfit(group["LapNumber"], y, 1)
+
+            if i[0] == "MEDIUM":
+                ax[0].plot(
+                    group["LapNumber"],
+                    pd.Series(a * group["LapNumber"] + b).apply(
+                        lambda x: timedelta(seconds=x)
+                    ),
+                    color="#" + self.session.get_driver(i[1]).TeamColor,
+                    linestyle=linestyleVar,
+                    label=labelVar,
+                )
+            if i[0] == "HARD":
+                ax[1].plot(
+                    group["LapNumber"],
+                    pd.Series(a * group["LapNumber"] + b).apply(
+                        lambda x: timedelta(seconds=x)
+                    ),
+                    color="#" + self.session.get_driver(i[1]).TeamColor,
+                    linestyle=linestyleVar,
+                    label=labelVar,
+                )
+
+        pits_grouped = pits.dropna(subset="PitInTime")[
+            ["Driver", "DriverNumber", "LapNumber", "Team"]
+        ].groupby("LapNumber")
+        for ax in ax:
+
+            for i, group in pits_grouped:
+
+                group.reset_index(inplace=True)
+                if len(group["Driver"]) == 2:
+                    ax.axvline(
+                        x=group["LapNumber"][0],
+                        color="#"
+                        + self.session.get_driver(group["DriverNumber"][0]).TeamColor,
+                        ymax=0.35 / 2,
+                    )
+                    ax.axvline(
+                        x=group["LapNumber"][0],
+                        color="#"
+                        + self.session.get_driver(group["DriverNumber"][1]).TeamColor,
+                        ymin=0.35 / 2,
+                        ymax=0.35,
+                    )
+                    ax.text(
+                        group["LapNumber"][0] + 0.17,
+                        0.001071,
+                        f"{group['Driver'][0]} & {group['Driver'][1]} masuk ke pit",
+                        rotation=90,
+                        verticalalignment="bottom",
+                        fontsize=6.5,
+                    )
+                else:
+                    for i, row in group.iterrows():
+                        ax.axvline(
+                            x=row["LapNumber"],
+                            color="#"
+                            + self.session.get_driver(row["DriverNumber"]).TeamColor,
+                            ymax=0.35,
+                        )
+                        ax.text(
+                            row["LapNumber"] + 0.17,
+                            0.001071,
+                            f"{row['Driver']} masuk ke pit",
+                            rotation=90,
+                            verticalalignment="bottom",
+                            fontsize=6.5,
+                        )
+        fig.suptitle("       Pace per Penggunaan Ban", fontsize=25)
+
+        fig.tight_layout()
+        fig.legend()
+
         plt.show()
