@@ -635,6 +635,64 @@ def getSessionTyreUsage(session_corrected):
     return session_tyre
 
 
+def getThrottle(session):
+    lap = []
+    drivers = []
+    throttleDuration = []
+    for driver in session.drivers:
+
+        for laps in range(2, session.total_laps):
+            drivers.append(session.get_driver(driver).Abbreviation)
+            lap.append(laps)
+            try:
+                test = pd.DataFrame(
+                    session.laps.pick_driver(driver).pick_lap(laps).get_telemetry()
+                )[["Throttle", "Time"]]
+            except:
+                throttleDuration.append(None)
+                continue
+
+            index = 0
+            isFullThrottle = []
+            for i, row in test.iterrows():
+                if i == 2 and row["Throttle"] >= 98:
+                    index += 1
+                    isFullThrottle.append(index)
+                elif row["Throttle"] >= 98 and test["Throttle"][i - 1] < 98:
+                    index += 1
+                    isFullThrottle.append(index)
+                elif row["Throttle"] >= 98:
+                    isFullThrottle.append(index)
+                else:
+                    isFullThrottle.append(None)
+            test["fullThrottleIndex"] = isFullThrottle
+            test_group = test.groupby("fullThrottleIndex")
+            total_time = timedelta()
+            for i, group in test_group:
+                total_time += getDuration(group["Time"])
+            throttleDuration.append(total_time)
+    test_dic = zip(lap, drivers, throttleDuration)
+
+    dfThrottle = pd.DataFrame(list(test_dic)).rename(
+        columns={0: "LapNumber", 1: "Driver", 2: "FullThrottleDuration"}
+    )
+
+    dfThrottle["tc"] = dfThrottle["Driver"].apply(
+        lambda x: "#" + session.get_driver(x).TeamColor
+    )
+
+    dfThrottle = dfThrottle.merge(
+        session.laps[["LapTime", "LapNumber", "Driver"]], on=["LapNumber", "Driver"]
+    ).dropna()
+    dfThrottle["PercentFullThrottle"] = (
+        dfThrottle["FullThrottleDuration"] / dfThrottle["LapTime"]
+    ) * 100
+
+
+def getPits(laps, drvList):
+    return laps[(laps["Driver"].isin(drvList)) & (laps["LapNumber"] > 1)]
+
+
 class vizDataRace:
     def __init__(self, session):
         self.session = session
@@ -694,10 +752,7 @@ class vizDataRace:
         plt.show()
 
     def TyrePace(self, drvList):
-        pits = self.session_corrected[
-            (self.session_corrected["Driver"].isin(drvList))
-            & (session_corrected["LapNumber"] > 1)
-        ]  #
+        pits = getPits(self.session_corrected, drvList)
         pits_adjusted = pits[
             (pits["IsAccurate"] is True)
             & (pits["LapTime"] < timedelta(minutes=2, seconds=0))
@@ -821,3 +876,83 @@ class vizDataRace:
         fig.legend()
 
         plt.show()
+
+    def ThrottleViz(self, drvList):
+        pits = getPits(self.session_corrected, drvList).dropna(subset="PitInTime")[
+            ["Driver", "DriverNumber", "LapNumber"]
+        ]
+        dfThrottle = getThrottle(self.session)
+        fig, ax = plt.subplots(figsize=(12, 5))
+        # sns.lineplot(data=dfThrottle,x='LapNumber',y='FullThrottleDuration',hue='Driver',ax=ax,marker='o')
+        tcCache = []
+
+        dfThrottleViz = dfThrottle[
+            (dfThrottle["LapNumber"] >= 4)
+            & (dfThrottle["Driver"].isin(["NOR", "LEC", "SAI", "PIA", "VER"]))
+        ]
+        for i, group in dfThrottleViz.groupby(["Driver", "tc"]):
+            if i[1] in tcCache:
+                linestyleVar = ":"
+            else:
+                linestyleVar = "-"
+            tcCache.append(i[1])
+            ax.plot(
+                group["LapNumber"],
+                group["PercentFullThrottle"],
+                color=i[1],
+                label=i[0],
+                marker="o",
+                linestyle=linestyleVar,
+            )
+            pits_grouped = pits.groupby("LapNumber")
+
+        for i, group in pits_grouped:
+            group.reset_index(inplace=True)
+            if len(group["Driver"]) == 2:
+                ax.axvline(
+                    x=group["LapNumber"][0],
+                    color="#"
+                    + self.session.get_driver(group["DriverNumber"][0]).TeamColor,
+                    ymax=0.2 / 2,
+                )
+                ax.axvline(
+                    x=group["LapNumber"][0],
+                    color="#"
+                    + self.session.get_driver(group["DriverNumber"][1]).TeamColor,
+                    ymin=0.2 / 2,
+                    ymax=0.2,
+                )
+                ax.text(
+                    group["LapNumber"][0] + 0.45,
+                    32.7,
+                    f"{group['Driver'][0]} & {group['Driver'][1]} masuk ke pit",
+                    rotation=90,
+                    verticalalignment="bottom",
+                    fontsize=6.5,
+                )
+            else:
+                for i, row in group.iterrows():
+                    ax.axvline(
+                        x=row["LapNumber"],
+                        color="#"
+                        + self.session.get_driver(row["DriverNumber"]).TeamColor,
+                        ymax=0.2,
+                    )
+                    ax.text(
+                        row["LapNumber"] + 0.45,
+                        32.7,
+                        f"{row['Driver']} masuk ke pit",
+                        rotation=90,
+                        verticalalignment="bottom",
+                        fontsize=6.5,
+                    )
+        from matplotlib.ticker import PercentFormatter
+
+        fig.suptitle(
+            "Seberapa Lama Para Pembalap Menginjak Pedal Gas secara Penuh per Lap?"
+        )
+        ax.yaxis.set_major_formatter(PercentFormatter())
+        ax.set_ylabel("prosentase pedal gas penuh per lap")
+        ax.set_xlabel("lap ke-")
+
+        ax.legend()
