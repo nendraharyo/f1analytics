@@ -956,3 +956,29 @@ class vizDataRace:
         ax.set_xlabel("lap ke-")
 
         ax.legend()
+
+    def BoxPlot(self):
+        teamsColor = {
+            row["Team"]: "#" + self.session.get_driver(row["Driver"]).TeamColor
+            for i, row in pd.DataFrame(
+                self.session_corrected[["Team", "Driver"]]
+            ).iterrows()
+        }
+
+        fig, axs = plt.subplots(figsize=(13, 7))
+        sns.boxplot(
+            data=self.session.pick_wo_box(),
+            x="Driver",
+            y="LapTime",
+            hue="Team",
+            legend=False,
+            palette=teamsColor,
+            ax=axs,
+            showfliers=False,
+        )
+        lines = axs.lines
+        for i in lines:
+            i.set_color("w")
+        axs.set_title("Konsistensi Pace")
+        axs.set_xlabel("pembalap")
+        axs.invert_yaxis()
