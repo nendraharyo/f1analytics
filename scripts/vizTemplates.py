@@ -982,3 +982,45 @@ class vizDataRace:
         axs.set_title("Konsistensi Pace")
         axs.set_xlabel("pembalap")
         axs.invert_yaxis()
+
+    def LinePlot(self, drvList=None):
+        if drvList is None:
+            drvList = self.session.drivers
+        laps_corrected_lim = self.session_corrected[
+            self.session_corrected["LapTime"] < timedelta(minutes=1, seconds=40)
+        ]
+        fig, axs = plt.subplots(figsize=(13, 7))
+        cacheTeam = []
+        for index, group in laps_corrected_lim[
+            laps_corrected_lim["Driver"].isin(drvList)
+        ][["LapTime", "LapNumber", "Driver", "DriverNumber", "Team"]].groupby(
+            ["Driver", "DriverNumber", "Team"]
+        ):
+            if index[2] in cacheTeam:
+                linestyleVar = ":"
+            else:
+                linestyleVar = "-"
+                cacheTeam.append(index[2])
+
+            # X_Y_Spline = make_interp_spline(group["LapNumber"], group["LapTime"])
+            # X_ = np.linspace(group["LapNumber"].min(), group["LapNumber"].max(), 500)
+            # Y_ = X_Y_Spline(X_)
+            axs.plot(
+                group["LapNumber"],
+                group["LapTime"],
+                color="#" + self.session.get_driver(index[1]).TeamColor,
+                linestyle=linestyleVar,
+                label=index[0],
+            )
+        # sns.lineplot(data=laps_corrected_lim[laps_corrected_lim['LapNumber']>3],y='LapTime',x='LapNumber',hue='Driver',ax=axs[1],palette=teamsColor)
+        # axs[1].set_ylim(0.00107,0.00116)
+        # fig.suptitle('Konsistensi Pace')
+
+        axs.set_title("Grafik Laptime per Lap")
+        axs.set_ylabel("waktu")
+
+        axs.set_ylabel("waktu")
+        axs.set_xlabel("lap ke-")
+
+        axs.legend()
+        fig.tight_layout()
