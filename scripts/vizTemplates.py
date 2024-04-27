@@ -1024,3 +1024,126 @@ class vizDataRace:
 
         axs.legend()
         fig.tight_layout()
+
+    def PacePerSector(self, drvList=None):
+        if drvList is None:
+            drvList = self.session.drivers
+        ranks = pd.DataFrame()
+        for Lap, group in pd.DataFrame(
+            self.session.laps.pick_accurate().pick_wo_box()[
+                [
+                    "Driver",
+                    "LapNumber",
+                    "Sector1Time",
+                    "Sector2Time",
+                    "Sector3Time",
+                    "Team",
+                ]
+            ]
+        ).groupby("LapNumber"):
+            group["LapNumber"] = Lap
+            group.set_index(["LapNumber", "Driver", "Team"], inplace=True)
+            ranks = pd.concat([ranks, group.rank(method="dense")])
+        ranks = ranks.reset_index()
+
+        fig, axs = plt.subplots(3, 1, figsize=(18, 10), sharex=True)
+        teamCache = []
+        for i, group in (
+            self.session.laps.pick_accurate()
+            .pick_wo_box()[
+                [
+                    "Driver",
+                    "LapNumber",
+                    "Sector1Time",
+                    "Sector2Time",
+                    "Sector3Time",
+                    "Team",
+                ]
+            ]
+            .groupby(["Driver", "Team"])
+        ):
+            if i[0] not in drvList:
+                continue
+            if i[1] in teamCache:
+                linestyleVar = ":"
+            else:
+                linestyleVar = "-"
+                teamCache.append(i[1])
+            axs[0].plot(
+                group["LapNumber"],
+                group["Sector1Time"],
+                marker="o",
+                linestyle=linestyleVar,
+                color="#" + self.session.get_driver(i[0]).TeamColor,
+                label=i[0],
+            )
+
+        teamCache = []
+        for i, group in (
+            self.session.laps.pick_accurate()
+            .pick_wo_box()[
+                [
+                    "Driver",
+                    "LapNumber",
+                    "Sector1Time",
+                    "Sector2Time",
+                    "Sector3Time",
+                    "Team",
+                ]
+            ]
+            .groupby(["Driver", "Team"])
+        ):
+            if i[0] not in drvList:
+                continue
+            if i[1] in teamCache:
+                linestyleVar = ":"
+            else:
+                linestyleVar = "-"
+                teamCache.append(i[1])
+            axs[1].plot(
+                group["LapNumber"],
+                group["Sector2Time"],
+                marker="o",
+                linestyle=linestyleVar,
+                color="#" + self.session.get_driver(i[0]).TeamColor,
+                label=i[0],
+            )
+
+        teamCache = []
+        for i, group in (
+            self.session.laps.pick_accurate()
+            .pick_wo_box()[
+                [
+                    "Driver",
+                    "LapNumber",
+                    "Sector1Time",
+                    "Sector2Time",
+                    "Sector3Time",
+                    "Team",
+                ]
+            ]
+            .groupby(["Driver", "Team"])
+        ):
+            if i[0] not in drvList:
+                continue
+            if i[1] in teamCache:
+                linestyleVar = ":"
+            else:
+                linestyleVar = "-"
+                teamCache.append(i[1])
+            axs[2].plot(
+                group["LapNumber"],
+                group["Sector3Time"],
+                marker="o",
+                linestyle=linestyleVar,
+                color="#" + self.session.get_driver(i[0]).TeamColor,
+                label=i[0],
+            )
+        axs[1].set_ylabel("waktu")
+        axs[0].set_ylabel("waktu")
+        axs[2].set_ylabel("waktu")
+        axs[0].set_title("Sektor Pertama")
+        axs[1].set_title("Sektor Kedua")
+        axs[2].set_title("Sektor Ketiga")
+        axs[2].set_xlabel("lap ke-")
+        axs[0].legend()
