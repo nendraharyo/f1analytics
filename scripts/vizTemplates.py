@@ -103,7 +103,7 @@ def getAvgvMinLaptimeClusters(session, epsVar=0.44, min_samp=4):
     return avg_vs_min_Laptime
 
 
-def gettrackSegmentsDataQuali(laps_telem, session, segments=25):
+def gettrackSpeedSegmentsDataQuali(laps_telem, session, segments=25):
     laps_telem.loc[:, "miniSect"] = np.round(
         laps_telem["RelativeDistance"].to_numpy() / (1 / segments)
     )
@@ -239,6 +239,14 @@ def getFastAgg(all_quali, session):
     )
     fast_agg.sort_values(by="BestLap", inplace=True)
     return fast_agg
+
+
+class vizData:
+    def __init__(self, session):
+        self.session = session
+        self.fastest_quali = getFastestTelemetry(session)
+        self.all_quali = getAllTelemetry(session)
+        self.circInfo = session.get_circuit_info()
 
 
 class vizDataQuali:
@@ -405,7 +413,9 @@ class vizDataQuali:
 
     def trackDominance(self):
         circRot = self.circInfo.rotation
-        listProp, single_lap = gettrackSegmentsDataQuali(self.all_quali, self.session)
+        listProp, single_lap = gettrackSpeedSegmentsDataQuali(
+            self.all_quali, self.session
+        )
         x, y = rotate_matrix(single_lap["X"].values, single_lap["Y"].values, circRot)
 
         listProp.sort_values("proportion", inplace=True)
@@ -421,7 +431,7 @@ class vizDataQuali:
 
         fig, ax = plt.subplots(figsize=(7, 5.5))
 
-        fig.suptitle("Kualifikasi Japanese GP 2024 - Track Dominance Semua Laps")
+        fig.suptitle(f"Kualifikasi {self.session.name} - Track Dominance Semua Laps")
 
         ax.add_collection(lc_comp)
         ax.axis("equal")
@@ -1147,3 +1157,6 @@ class vizDataRace:
         axs[2].set_title("Sektor Ketiga")
         axs[2].set_xlabel("lap ke-")
         axs[0].legend()
+
+
+# TODO: pisahkan object jadi data model: cari method yg sama antara quali sm race
