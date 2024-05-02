@@ -65,17 +65,20 @@ def rotate(xy, *, angle):  # melakukan proses rotasi matriks numpy
 def getFastestTelemetry(session):
     fastest = pd.DataFrame()
     for drv in session.drivers:
-        df_temp = pd.DataFrame(
-            session.laps.pick_driver(drv)
-            .pick_accurate()
-            .pick_wo_box()
-            .pick_fastest()
-            .get_telemetry()
-        )
-        df_temp["drvName"] = session.get_driver(drv).Abbreviation
-        df_temp["teamName"] = session.get_driver(drv).TeamName
-        df_temp["teamColor"] = "#" + session.get_driver(drv).TeamColor
-        fastest = pd.concat([fastest, df_temp])
+        try:
+            df_temp = pd.DataFrame(
+                session.laps.pick_driver(drv)
+                .pick_accurate()
+                .pick_wo_box()
+                .pick_fastest()
+                .get_telemetry()
+            )
+            df_temp["drvName"] = session.get_driver(drv).Abbreviation
+            df_temp["teamName"] = session.get_driver(drv).TeamName
+            df_temp["teamColor"] = "#" + session.get_driver(drv).TeamColor
+            fastest = pd.concat([fastest, df_temp])
+        except:
+            continue
     return fastest
 
 
@@ -700,23 +703,24 @@ def getThrottle(session):
 
 
 def getPits(laps, drvList):
-    return laps[(laps["Driver"].isin(drvList)) & (laps["LapNumber"] > 1)]
+    laps_adjusted = laps[(laps["Driver"].isin(drvList)) & (laps["LapNumber"] > 1)]
+    return laps_adjusted
 
 
 class vizDataRace:
     def __init__(self, session):
         self.session = session
         self.session_corrected = session_corrected(session)
-        self.fastest_quali = getFastestTelemetry(session)
-        self.all_quali = getAllTelemetry(session)
+        self.fastest_laps = getFastestTelemetry(session)
+        self.all_laps = getAllTelemetry(session)
         self.circInfo = session.get_circuit_info()
-        self.tyre_usage = getSessionTyreUsage(session_corrected)
+        self.tyre_usage = getSessionTyreUsage(self.session_corrected)
 
     def TyreStrats(self):
         fig, ax = plt.subplots(figsize=(5, 10))
         for driver in self.session.drivers:
-            driver_stints = self.session_tyre.loc[
-                self.session_tyre["DriverNumber"] == driver
+            driver_stints = self.tyre_usage.loc[
+                self.tyre_usage["DriverNumber"] == driver
             ]
 
             previous_stint_end = 0
@@ -743,7 +747,7 @@ class vizDataRace:
         tyres = pd.DataFrame(fastf1.plotting.COMPOUND_COLORS, index=[0]).T.reset_index(
             names="Compound"
         )
-        tyresLegend = tyres[tyres["Compound"].isin(self.session_tyre["Compound"])]
+        tyresLegend = tyres[tyres["Compound"].isin(self.tyre_usage["Compound"])]
         colors = tyresLegend.set_index("Compound").to_dict()[0]
         labels = list(colors.keys())
         handles = [plt.Rectangle((0, 0), 1, 1, color=colors[label]) for label in labels]
@@ -764,7 +768,7 @@ class vizDataRace:
     def TyrePace(self, drvList):
         pits = getPits(self.session_corrected, drvList)
         pits_adjusted = pits[
-            (pits["IsAccurate"] is True)
+            (pits["IsAccurate"] == True)
             & (pits["LapTime"] < timedelta(minutes=2, seconds=0))
         ]
 
@@ -805,7 +809,7 @@ class vizDataRace:
             else:
                 labelVar = i[1]
                 drvCache.append(i[1])
-            if i[4] == 1:
+            if i[3] == 1:
                 linestyleVar = "-"
             else:
                 linestyleVar = ":"
