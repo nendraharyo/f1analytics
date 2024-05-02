@@ -700,6 +700,7 @@ def getThrottle(session):
     dfThrottle["PercentFullThrottle"] = (
         dfThrottle["FullThrottleDuration"] / dfThrottle["LapTime"]
     ) * 100
+    return dfThrottle
 
 
 def getPits(laps, drvList):
@@ -901,8 +902,7 @@ class vizDataRace:
         tcCache = []
 
         dfThrottleViz = dfThrottle[
-            (dfThrottle["LapNumber"] >= 4)
-            & (dfThrottle["Driver"].isin(["NOR", "LEC", "SAI", "PIA", "VER"]))
+            (dfThrottle["LapNumber"] >= 4) & (dfThrottle["Driver"].isin(drvList))
         ]
         for i, group in dfThrottleViz.groupby(["Driver", "tc"]):
             if i[1] in tcCache:
