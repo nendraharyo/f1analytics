@@ -981,7 +981,7 @@ class vizDataRace:
 
         fig, axs = plt.subplots(figsize=(13, 7))
         sns.boxplot(
-            data=self.session.pick_wo_box(),
+            data=self.session.laps.pick_wo_box(),
             x="Driver",
             y="LapTime",
             hue="Team",
@@ -1067,6 +1067,7 @@ class vizDataRace:
             .pick_wo_box()[
                 [
                     "Driver",
+                    "DriverNumber",
                     "LapNumber",
                     "Sector1Time",
                     "Sector2Time",
@@ -1074,11 +1075,11 @@ class vizDataRace:
                     "Team",
                 ]
             ]
-            .groupby(["Driver", "Team"])
+            .groupby(["Driver", "DriverNumber", "Team"])
         ):
-            if i[0] not in drvList:
+            if i[1] not in drvList:
                 continue
-            if i[1] in teamCache:
+            if i[2] in teamCache:
                 linestyleVar = ":"
             else:
                 linestyleVar = "-"
@@ -1098,6 +1099,7 @@ class vizDataRace:
             .pick_wo_box()[
                 [
                     "Driver",
+                    "DriverNumber",
                     "LapNumber",
                     "Sector1Time",
                     "Sector2Time",
@@ -1105,11 +1107,11 @@ class vizDataRace:
                     "Team",
                 ]
             ]
-            .groupby(["Driver", "Team"])
+            .groupby(["Driver", "DriverNumber", "Team"])
         ):
-            if i[0] not in drvList:
+            if i[1] not in drvList:
                 continue
-            if i[1] in teamCache:
+            if i[2] in teamCache:
                 linestyleVar = ":"
             else:
                 linestyleVar = "-"
@@ -1129,6 +1131,7 @@ class vizDataRace:
             .pick_wo_box()[
                 [
                     "Driver",
+                    "DriverNumber",
                     "LapNumber",
                     "Sector1Time",
                     "Sector2Time",
@@ -1136,11 +1139,11 @@ class vizDataRace:
                     "Team",
                 ]
             ]
-            .groupby(["Driver", "Team"])
+            .groupby(["Driver", "DriverNumber", "Team"])
         ):
-            if i[0] not in drvList:
+            if i[1] not in drvList:
                 continue
-            if i[1] in teamCache:
+            if i[2] in teamCache:
                 linestyleVar = ":"
             else:
                 linestyleVar = "-"
@@ -1161,6 +1164,7 @@ class vizDataRace:
         axs[2].set_title("Sektor Ketiga")
         axs[2].set_xlabel("lap ke-")
         axs[0].legend()
+        plt.show()
 
 
 # TODO: pisahkan object jadi data model: cari method yg sama antara quali sm race
