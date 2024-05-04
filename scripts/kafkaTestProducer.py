@@ -9,12 +9,11 @@ with open(r"data\interim\f1tfeed.json") as file:
     cookies = rq.utils.cookiejar_from_dict(cookies)
     session.cookies.update(cookies)
 
-
 producer = KafkaProducer(bootstrap_servers=["192.168.1.77:9094"])
 print("Harvesting...")
 while True:
     data = (
-        rq.get(r"https://f1.tfeed.net/tt.js")
+        session.get(r"https://f1.tfeed.net/tt.js")
         .text.replace("\n", "")
         .replace("\t", "")
         .replace("\r", "")
