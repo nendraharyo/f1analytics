@@ -11,5 +11,6 @@ while True:
         .replace("\r", "")
         .replace("//", "")
     )
-    producer.send("quickstart-events", data.encode())
+    if "ntt_f" in data:
+        producer.send("quickstart-events", data.encode())
 producer.flush()
