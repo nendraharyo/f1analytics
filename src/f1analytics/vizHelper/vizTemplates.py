@@ -708,6 +708,25 @@ def getPits(laps, drvList):
     return laps_adjusted
 
 
+def findNonGreen(session):
+    df = session.laps[["TrackStatus", "LapNumber"]]
+    df = df.dropna()
+    df = (
+        df.query('(TrackStatus.str.contains("4")) or (TrackStatus.str.contains("6"))')[
+            ["LapNumber", "TrackStatus"]
+        ]
+        .drop_duplicates()
+        .sort_values("LapNumber")
+        .reset_index(drop=True)
+    )
+
+    df["change"] = df["LapNumber"] - df["LapNumber"].shift(
+        1, fill_value=(df["LapNumber"][0]) - 2
+    )
+    df["group"] = df["LapNumber"].where(df["change"] > 1).ffill()
+    return df
+
+
 class vizDataRace:
     def __init__(self, session):
         self.session = session
@@ -793,7 +812,7 @@ class vizDataRace:
         ax[1].set_xlabel("Lap ke-")
         fig.text(-0.01, 0.23, "Waktu per Lap dengan koreksi bahan bakar", rotation=90)
         ax[1].set_title("HARD", fontsize=10)
-        stintgroups = pits_adjusted[
+        stintdf = pits_adjusted[
             [
                 "Stint",
                 "Compound",
@@ -802,15 +821,29 @@ class vizDataRace:
                 "Driver",
                 "Team",
             ]
-        ].groupby(["Compound", "Driver", "Stint", "Team"])
+        ]
+        dfTeamNum = (
+            pd.DataFrame(self.session_corrected)[["Driver", "Team", "DriverNumber"]]
+            .drop_duplicates()
+            .set_index("Driver")
+            .groupby("Team")
+            .rank()
+            .reset_index()
+        )
+        stintgroups = dfTeamNum.rename(columns={"DriverNumber": "TeamNum"}).merge(
+            stintdf, on="Driver"
+        )
+
         drvCache = []
-        for i, group in stintgroups:
+        for i, group in stintgroups.groupby(
+            ["Compound", "Driver", "Stint", "Team", "TeamNum"]
+        ):
             if i[1] in drvCache:
                 labelVar = ""
             else:
                 labelVar = i[1]
                 drvCache.append(i[1])
-            if i[3] == 1:
+            if i[4] == 1:
                 linestyleVar = "-"
             else:
                 linestyleVar = ":"
@@ -838,7 +871,7 @@ class vizDataRace:
                     linestyle=linestyleVar,
                     label=labelVar,
                 )
-
+        """
         pits_grouped = pits.dropna(subset="PitInTime")[
             ["Driver", "DriverNumber", "LapNumber", "Team"]
         ].groupby("LapNumber")
@@ -885,6 +918,7 @@ class vizDataRace:
                             verticalalignment="bottom",
                             fontsize=6.5,
                         )
+        """
         fig.suptitle("       Pace per Penggunaan Ban", fontsize=25)
 
         fig.tight_layout()
@@ -980,6 +1014,7 @@ class vizDataRace:
         }
 
         fig, axs = plt.subplots(figsize=(13, 7))
+        df = self.session.laps.pick_wo_box()
         sns.boxplot(
             data=self.session.laps.pick_wo_box(),
             x="Driver",
@@ -989,6 +1024,11 @@ class vizDataRace:
             palette=teamsColor,
             ax=axs,
             showfliers=False,
+            order=df[["Driver", "LapTime"]]
+            .groupby("Driver")
+            .median()
+            .sort_values("LapTime")
+            .index,
         )
         lines = axs.lines
         for i in lines:
@@ -1001,7 +1041,7 @@ class vizDataRace:
         if drvList is None:
             drvList = self.session.drivers
         laps_corrected_lim = self.session_corrected[
-            self.session_corrected["LapTime"] < timedelta(minutes=1, seconds=40)
+            self.session_corrected["LapTime"] < timedelta(minutes=1, seconds=35)
         ]
         fig, axs = plt.subplots(figsize=(13, 7))
         cacheTeam = []
@@ -1029,7 +1069,18 @@ class vizDataRace:
         # sns.lineplot(data=laps_corrected_lim[laps_corrected_lim['LapNumber']>3],y='LapTime',x='LapNumber',hue='Driver',ax=axs[1],palette=teamsColor)
         # axs[1].set_ylim(0.00107,0.00116)
         # fig.suptitle('Konsistensi Pace')
-
+        dfGroup = findNonGreen(self.session)
+        dfGroup = dfGroup.groupby("group")
+        ymin, ymax = axs.get_ylim()
+        for i, group in dfGroup:
+            axs.axvspan(
+                group["LapNumber"].min(),
+                group["LapNumber"].max(),
+                color="yellow",
+                zorder=3,
+            )
+            # if '4' in group['TrackStatus']:
+            # axs.text(group['LapNumber'].min(),((ymax-ymin)/2)+ymin,'SC',c='black',rotation=90,horizontalalignment='left',fontsize=45)
         axs.set_title("Grafik Laptime per Lap")
         axs.set_ylabel("waktu")
 
