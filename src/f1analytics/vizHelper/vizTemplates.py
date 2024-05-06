@@ -594,12 +594,18 @@ class vizDataQuali:
 
 def session_corrected(session):
     laps_corrected = pd.DataFrame()
+    laps_num = session.total_laps
     for drv in session.drivers:
-        df = (
-            (session.laps.pick_driver(drv)["LapNumber"] - 1)
-            * (101 / session.total_laps)
-            * 35
-        )
+        if laps_num == 0:
+            df = (
+                (session.laps.pick_driver(drv)["LapNumber"] - 1)
+                * (101 / session.laps["LapNumber"].max())
+                * 35
+            )
+        else:
+            df = (
+                (session.laps.pick_driver(drv)["LapNumber"] - 1) * (101 / laps_num) * 35
+            )
 
         df[:] = df[::-1]
         df = df.apply(lambda x: timedelta(milliseconds=x))
@@ -711,20 +717,30 @@ def getPits(laps, drvList):
 def findNonGreen(session):
     df = session.laps[["TrackStatus", "LapNumber"]]
     df = df.dropna()
-    df = (
-        df.query('(TrackStatus.str.contains("4")) or (TrackStatus.str.contains("6"))')[
-            ["LapNumber", "TrackStatus"]
-        ]
-        .drop_duplicates()
-        .sort_values("LapNumber")
-        .reset_index(drop=True)
-    )
+    if (
+        len(
+            df.drop_duplicates().query(
+                '(TrackStatus.str.contains("4")) or (TrackStatus.str.contains("6"))'
+            )
+        )
+        > 0
+    ):
+        df = (
+            df.query(
+                '(TrackStatus.str.contains("4")) or (TrackStatus.str.contains("6"))'
+            )[["LapNumber", "TrackStatus"]]
+            .drop_duplicates()
+            .sort_values("LapNumber")
+            .reset_index(drop=True)
+        )
 
-    df["change"] = df["LapNumber"] - df["LapNumber"].shift(
-        1, fill_value=(df["LapNumber"][0]) - 2
-    )
-    df["group"] = df["LapNumber"].where(df["change"] > 1).ffill()
-    return df
+        df["change"] = df["LapNumber"] - df["LapNumber"].shift(
+            1, fill_value=(df["LapNumber"][0]) - 2
+        )
+        df["group"] = df["LapNumber"].where(df["change"] > 1).ffill()
+        return df
+    else:
+        return None
 
 
 class vizDataRace:
@@ -1069,16 +1085,18 @@ class vizDataRace:
         # sns.lineplot(data=laps_corrected_lim[laps_corrected_lim['LapNumber']>3],y='LapTime',x='LapNumber',hue='Driver',ax=axs[1],palette=teamsColor)
         # axs[1].set_ylim(0.00107,0.00116)
         # fig.suptitle('Konsistensi Pace')
-        dfGroup = findNonGreen(self.session)
-        dfGroup = dfGroup.groupby("group")
+        dfGroupSC = findNonGreen(self.session)
         ymin, ymax = axs.get_ylim()
-        for i, group in dfGroup:
-            axs.axvspan(
-                group["LapNumber"].min(),
-                group["LapNumber"].max(),
-                color="yellow",
-                zorder=3,
-            )
+        if dfGroupSC is not None:
+            dfGroupSC = dfGroupSC.groupby("group")
+
+            for i, group in dfGroupSC:
+                axs.axvspan(
+                    group["LapNumber"].min(),
+                    group["LapNumber"].max(),
+                    color="yellow",
+                    zorder=3,
+                )
             # if '4' in group['TrackStatus']:
             # axs.text(group['LapNumber'].min(),((ymax-ymin)/2)+ymin,'SC',c='black',rotation=90,horizontalalignment='left',fontsize=45)
         axs.set_title("Grafik Laptime per Lap")
