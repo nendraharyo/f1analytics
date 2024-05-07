@@ -439,12 +439,13 @@ class vizData:
         # labels = list(colors.keys())[::-1]
         # handles = [plt.Rectangle((0, 0), 1, 1, color=colors[label]) for label in labels]
 
-    def trackDominance(self):
-        # TODO: add driver choices
+    def trackDominance(self, drvList=None):
+        # TODO:start direction rotation
         circRot = self.circInfo.rotation
-        listProp, single_lap = gettrackSpeedSegmentsDataQuali(
-            self.all_laps, self.session
-        )
+        lapsTelem = self.all_laps
+        if drvList is not None:
+            lapsTelem = lapsTelem[lapsTelem["drvName"].isin(drvList)]
+        listProp, single_lap = gettrackSpeedSegmentsDataQuali(lapsTelem, self.session)
         x, y = rotate_matrix(single_lap["X"].values, single_lap["Y"].values, circRot)
 
         listProp.sort_values("proportion", inplace=True)
@@ -507,7 +508,7 @@ class vizData:
                 color="white",
             )
         plt.arrow(
-            x[0], y[0] + 300, +900, 0, color="white", shape="right", head_width=500
+            x[0], y[0] + 300, +900, -550, color="white", shape="right", head_width=500
         )
         bounds = [
             i * 10 for i in (listProp.sort_values("proportion")["proportion"].to_list())
