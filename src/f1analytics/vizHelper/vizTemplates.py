@@ -807,7 +807,7 @@ class vizDataRace(vizData):
             & (pits["LapTime"] < timedelta(minutes=2, seconds=0))
         ]
 
-        fig, ax = plt.subplots(2, 1, sharey=True, sharex=True, figsize=(12, 5))
+        fig, ax = plt.subplots(2, 1, sharey=True, sharex=True, figsize=(12, 8))
         for i, row in pits_adjusted.iterrows():
             if row["Compound"] == "MEDIUM":
                 ax[0].scatter(
@@ -1003,7 +1003,7 @@ class vizDataRace(vizData):
                     )
                     ax.text(
                         row["LapNumber"] + 0.45,
-                        32.7,
+                        0,
                         f"{row['Driver']} masuk ke pit",
                         rotation=90,
                         verticalalignment="bottom",
@@ -1240,7 +1240,6 @@ class vizDataRace(vizData):
             (pits["IsAccurate"] == True)
             & (pits["LapTime"] < timedelta(minutes=2, seconds=0))
         ]
-
         fig, ax = plt.subplots(1, 3, sharey=True, sharex=True, figsize=(13, 6))
         for i, row in pits_adjusted.iterrows():
             if row["Compound"] == "SOFT":
@@ -1388,7 +1387,9 @@ class vizDataRace(vizData):
 
         result = maxspeed_drs - maxspeed_no_drs
         result.rename(columns=({"Speed": "SpeedGain"}), inplace=True)
-        result["SpeedGainStr"] = "+" + result["SpeedGain"].astype(str)
+        result["SpeedGainStr"] = [
+            "" if math.isnan(x) == True else ("+" + str(x)) for x in result["SpeedGain"]
+        ]
         maxspeed_drs.merge(result, on="drvName")
 
         teamsColor = {
@@ -1428,8 +1429,8 @@ class vizDataRace(vizData):
         ax.bar_label(
             ax.containers[1],
             labels=result.sort_values("SpeedGain", ascending=False)["SpeedGainStr"],
-            fontsize=9,
-            rotation=90,
+            fontsize=6,
+            # rotation=90,
             padding=4,
             color="black",
         )
