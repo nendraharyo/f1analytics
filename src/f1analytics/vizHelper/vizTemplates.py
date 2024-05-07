@@ -15,8 +15,6 @@ from matplotlib.ticker import PercentFormatter
 from sklearn.cluster import DBSCAN
 from sklearn.preprocessing import StandardScaler
 
-fastf1.plotting.setup_mpl()
-fastf1.logger.set_log_level("ERROR")
 # mendefinisikan fungsi
 
 
@@ -249,7 +247,7 @@ def session_corrected(session):
     laps_corrected = pd.DataFrame()
     laps_num = session.total_laps
     for drv in session.drivers:
-        if laps_num == 0:
+        if (laps_num == 0) or (laps_num is None):
             df = (
                 (session.laps.pick_driver(drv)["LapNumber"] - 1)
                 * (101 / session.laps["LapNumber"].max())
@@ -398,6 +396,10 @@ def findNonGreen(session):
 
 class vizData:
     def __init__(self, session):
+
+        fastf1.plotting.setup_mpl()
+        fastf1.logger.set_log_level("ERROR")
+
         self.session = session
         print("getting and enriching fastest laps telemetry...")
         self.fastest_laps = getFastestTelemetry(session)
@@ -625,7 +627,7 @@ class vizDataQuali(vizData):
 
     def quadrantAnalysis(self):
         test = (
-            self.fastest_quali.groupby(["drvName", "teamName", "teamColor"])
+            self.fastest_laps.groupby(["drvName", "teamName", "teamColor"])
             .agg(maxSpeed=("Speed", "max"), avgSpeed=("Speed", "mean"))
             .reset_index()
         )
@@ -737,9 +739,7 @@ class vizDataQuali(vizData):
         ax.set_xlabel("Rata - Rata Kecepatan (Kpj)")
         ax.set_ylabel("Kecepatan Tertinggi (Kpj)")
         adjust_text(texts)
-        plt.suptitle(
-            "Korelasi Kecepatan Tertinggi dan Rata - Rata Kecepatan | Kualifikasi Japanese GP 2024"
-        )
+        plt.suptitle("Korelasi Kecepatan Tertinggi dan Rata - Rata Kecepatan")
         plt.title("Diambil dari Lap tercepat masing - masing pembalap", fontsize=9)
 
         plt.show()
@@ -1233,5 +1233,117 @@ class vizDataRace(vizData):
         axs[0].legend()
         plt.show()
 
+    def TyreDeg(self, drvList=None):
 
-# TODO: pisahkan object jadi data model: cari method yg sama antara quali sm race
+        pits = getPits(self.session_corrected, drvList)
+        pits_adjusted = pits[
+            (pits["IsAccurate"] == True)
+            & (pits["LapTime"] < timedelta(minutes=2, seconds=0))
+        ]
+
+        fig, ax = plt.subplots(1, 3, sharey=True, sharex=True, figsize=(13, 6))
+        for i, row in pits_adjusted.iterrows():
+            if row["Compound"] == "SOFT":
+                ax[0].scatter(
+                    row["TyreLife"],
+                    row["fuel_corrected_laptime"],
+                    color="#" + self.session.get_driver(row["DriverNumber"]).TeamColor,
+                    alpha=0.2,
+                )
+            if row["Compound"] == "HARD":
+                ax[2].scatter(
+                    row["TyreLife"],
+                    row["fuel_corrected_laptime"],
+                    color="#" + self.session.get_driver(row["DriverNumber"]).TeamColor,
+                    alpha=0.2,
+                )
+            if row["Compound"] == "MEDIUM":
+                ax[1].scatter(
+                    row["TyreLife"],
+                    row["fuel_corrected_laptime"],
+                    color="#" + self.session.get_driver(row["DriverNumber"]).TeamColor,
+                    alpha=0.2,
+                )
+        ax[0].set_title("SOFT", color="red", fontsize=10)
+        ax[1].set_xlabel("Umur Ban")
+        fig.text(-0.01, 0.23, "Waktu per Lap dengan koreksi bahan bakar", rotation=90)
+        ax[1].set_title("MEDIUM", color="yellow", fontsize=10)
+        ax[2].set_title("HARD", fontsize=10)
+
+        stintdf = pits_adjusted[
+            [
+                "Stint",
+                "Compound",
+                "fuel_corrected_laptime",
+                "LapNumber",
+                "Driver",
+                "Team",
+                "TyreLife",
+            ]
+        ]
+        dfTeamNum = (
+            pd.DataFrame(self.session_corrected)[["Driver", "Team", "DriverNumber"]]
+            .drop_duplicates()
+            .set_index("Driver")
+            .groupby("Team")
+            .rank()
+            .reset_index()
+        )
+        stintgroups = dfTeamNum.rename(columns={"DriverNumber": "TeamNum"}).merge(
+            stintdf, on="Driver"
+        )
+
+        drvCache = []
+        for i, group in stintgroups.groupby(
+            ["Compound", "Driver", "Stint", "Team", "TeamNum"]
+        ):
+            if i[1] in drvCache:
+                labelVar = ""
+            else:
+                labelVar = i[1]
+                drvCache.append(i[1])
+            if i[4] == 1:
+                linestyleVar = "-"
+            else:
+                linestyleVar = ":"
+            # xx = np.linspace(min(group['fuel_corrected_laptime']),max(group['fuel_corrected_laptime']), 100)
+            y = group["fuel_corrected_laptime"].apply(lambda x: x.total_seconds())
+            a, b = np.polyfit(group["TyreLife"], y, 1)
+
+            if i[0] == "MEDIUM":
+                ax[1].plot(
+                    group["TyreLife"],
+                    pd.Series(a * group["TyreLife"] + b).apply(
+                        lambda x: timedelta(seconds=x)
+                    ),
+                    color="#" + self.session.get_driver(i[1]).TeamColor,
+                    linestyle=linestyleVar,
+                    label=labelVar,
+                )
+            if i[0] == "HARD":
+                ax[2].plot(
+                    group["TyreLife"],
+                    pd.Series(a * group["TyreLife"] + b).apply(
+                        lambda x: timedelta(seconds=x)
+                    ),
+                    color="#" + self.session.get_driver(i[1]).TeamColor,
+                    linestyle=linestyleVar,
+                    label=labelVar,
+                )
+            if i[0] == "SOFT":
+                ax[0].plot(
+                    group["TyreLife"],
+                    pd.Series(a * group["TyreLife"] + b).apply(
+                        lambda x: timedelta(seconds=x)
+                    ),
+                    color="#" + self.session.get_driver(i[1]).TeamColor,
+                    linestyle=linestyleVar,
+                    label=labelVar,
+                )
+
+        fig.suptitle("     Degradasi Ban", fontsize=25)
+
+        fig.tight_layout()
+        fig.legend()
+
+        plt.show()
