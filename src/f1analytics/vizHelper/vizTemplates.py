@@ -1347,3 +1347,95 @@ class vizDataRace(vizData):
         fig.legend()
 
         plt.show()
+
+    def drsGain(self):
+        # TODO: add error correction
+        drsSpeed = self.all_laps[
+            [
+                "drvName",
+                "teamName",
+                "teamColor",
+                "DRS",
+                "Speed",
+                "DistanceToDriverAhead",
+                "Throttle",
+                "Brake",
+            ]
+        ]
+
+        no_drs = drsSpeed[
+            (drsSpeed["DRS"].isin([0, 1, 8]))
+            & (drsSpeed["Throttle"] > 98)
+            & (drsSpeed["Brake"] == 0)
+        ]
+        no_drs_slipstream = no_drs[no_drs["DistanceToDriverAhead"] < 5]
+        no_drs_no_slipstream = no_drs[no_drs["DistanceToDriverAhead"] > 5]
+
+        with_drs = drsSpeed[~drsSpeed["DRS"].isin([0, 1, 2, 3, 8])]
+        drs_slipstream = with_drs[with_drs["DistanceToDriverAhead"] < 5]
+        drs_no_slipstream = with_drs[with_drs["DistanceToDriverAhead"] > 5]
+        # no_drs.drop([646,653,644,643,642,666,641,651,630,637,636],inplace=True)
+        maxspeed_no_drs = (
+            no_drs[["drvName", "teamName", "teamColor", "Speed"]]
+            .groupby(["drvName", "teamName", "teamColor"])
+            .max()
+        )
+        maxspeed_drs = (
+            with_drs[["drvName", "teamName", "teamColor", "Speed"]]
+            .groupby(["drvName", "teamName", "teamColor"])
+            .max()
+        )
+
+        result = maxspeed_drs - maxspeed_no_drs
+        result.rename(columns=({"Speed": "SpeedGain"}), inplace=True)
+        result["SpeedGainStr"] = "+" + result["SpeedGain"].astype(str)
+        maxspeed_drs.merge(result, on="drvName")
+
+        teamsColor = {
+            row["teamName"]: row["teamColor"]
+            for i, row in drsSpeed[["teamName", "teamColor"]]
+            .drop_duplicates()
+            .iterrows()
+        }
+        maxspeed_no_drs.sort_values("Speed", inplace=True, ascending=False)
+        fig, ax = plt.subplots(figsize=(12, 5))
+
+        sns.barplot(
+            data=maxspeed_drs,
+            x="drvName",
+            y="Speed",
+            color="orange",
+            ax=ax,
+            label="Dengan DRS",
+            order=result.sort_values("SpeedGain", ascending=False).reset_index()[
+                "drvName"
+            ],
+            width=0.6,
+        )
+
+        sns.barplot(
+            data=maxspeed_no_drs,
+            x="drvName",
+            y="Speed",
+            ax=ax,
+            color="green",
+            label="Tanpa DRS",
+            order=result.sort_values("SpeedGain", ascending=False).reset_index()[
+                "drvName"
+            ],
+            width=0.6,
+        )
+        ax.bar_label(
+            ax.containers[1],
+            labels=result.sort_values("SpeedGain", ascending=False)["SpeedGainStr"],
+            fontsize=9,
+            rotation=90,
+            padding=4,
+            color="black",
+        )
+        ax.set_xlabel("Pembalap")
+        ax.set_ylabel("Kecepatan (kpj)")
+
+        ax.set_ylim(250, 365)
+        fig.suptitle("Kecepatan yang didapatkan saat menggunakan DRS")
+        plt.show()
