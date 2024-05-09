@@ -1240,34 +1240,27 @@ class vizDataRace(vizData):
             (pits["IsAccurate"] == True)
             & (pits["LapTime"] < timedelta(minutes=2, seconds=0))
         ]
-        fig, ax = plt.subplots(1, 3, sharey=True, sharex=True, figsize=(13, 6))
-        for i, row in pits_adjusted.iterrows():
-            if row["Compound"] == "SOFT":
-                ax[0].scatter(
+        compound_groups = {}
+        tyres = pits_adjusted["Compound"].drop_duplicates()
+        fig, ax = plt.subplots(1, len(tyres), sharey=True, sharex=True, figsize=(13, 6))
+        for i, group in enumerate(pits_adjusted.groupby("Compound")):
+            compound_groups[group[0]] = i
+            if group[0] == "SOFT":
+                ax[i].set_title("SOFT", color="red", fontsize=10)
+            elif group[0] == "MEDIUM":
+                ax[i].set_title("MEDIUM", color="yellow", fontsize=10)
+            else:
+                ax[i].set_title("HARD", fontsize=10)
+            for index, row in group[1].iterrows():
+                ax[i].scatter(
                     row["TyreLife"],
                     row["fuel_corrected_laptime"],
                     color="#" + self.session.get_driver(row["DriverNumber"]).TeamColor,
                     alpha=0.2,
                 )
-            if row["Compound"] == "HARD":
-                ax[2].scatter(
-                    row["TyreLife"],
-                    row["fuel_corrected_laptime"],
-                    color="#" + self.session.get_driver(row["DriverNumber"]).TeamColor,
-                    alpha=0.2,
-                )
-            if row["Compound"] == "MEDIUM":
-                ax[1].scatter(
-                    row["TyreLife"],
-                    row["fuel_corrected_laptime"],
-                    color="#" + self.session.get_driver(row["DriverNumber"]).TeamColor,
-                    alpha=0.2,
-                )
-        ax[0].set_title("SOFT", color="red", fontsize=10)
-        ax[1].set_xlabel("Umur Ban")
+
+        fig.text(0.5, -0.01, "Umur Ban", rotation=90)
         fig.text(-0.01, 0.23, "Waktu per Lap dengan koreksi bahan bakar", rotation=90)
-        ax[1].set_title("MEDIUM", color="yellow", fontsize=10)
-        ax[2].set_title("HARD", fontsize=10)
 
         stintdf = pits_adjusted[
             [
@@ -1309,36 +1302,15 @@ class vizDataRace(vizData):
             y = group["fuel_corrected_laptime"].apply(lambda x: x.total_seconds())
             a, b = np.polyfit(group["TyreLife"], y, 1)
 
-            if i[0] == "MEDIUM":
-                ax[1].plot(
-                    group["TyreLife"],
-                    pd.Series(a * group["TyreLife"] + b).apply(
-                        lambda x: timedelta(seconds=x)
-                    ),
-                    color="#" + self.session.get_driver(i[1]).TeamColor,
-                    linestyle=linestyleVar,
-                    label=labelVar,
-                )
-            if i[0] == "HARD":
-                ax[2].plot(
-                    group["TyreLife"],
-                    pd.Series(a * group["TyreLife"] + b).apply(
-                        lambda x: timedelta(seconds=x)
-                    ),
-                    color="#" + self.session.get_driver(i[1]).TeamColor,
-                    linestyle=linestyleVar,
-                    label=labelVar,
-                )
-            if i[0] == "SOFT":
-                ax[0].plot(
-                    group["TyreLife"],
-                    pd.Series(a * group["TyreLife"] + b).apply(
-                        lambda x: timedelta(seconds=x)
-                    ),
-                    color="#" + self.session.get_driver(i[1]).TeamColor,
-                    linestyle=linestyleVar,
-                    label=labelVar,
-                )
+            ax[compound_groups[i[0]]].plot(
+                group["TyreLife"],
+                pd.Series(a * group["TyreLife"] + b).apply(
+                    lambda x: timedelta(seconds=x)
+                ),
+                color="#" + self.session.get_driver(i[1]).TeamColor,
+                linestyle=linestyleVar,
+                label=labelVar,
+            )
 
         fig.suptitle("     Degradasi Ban", fontsize=25)
 
