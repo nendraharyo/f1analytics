@@ -81,7 +81,7 @@ def getFastestTelemetry(session):
     return fastest
 
 
-def getAvgvMinLaptimeClusters(session, epsVar=0.44, min_samp=4):
+def getAvgvMinLaptimeClusters(session, clusterNames=None, epsVar=0.44, min_samp=4):
     avg_vs_min_Laptime = (
         session.laps.pick_accurate()
         .pick_wo_box()[["LapTime", "Driver", "DriverNumber"]]
@@ -102,6 +102,10 @@ def getAvgvMinLaptimeClusters(session, epsVar=0.44, min_samp=4):
     clustering = DBSCAN(eps=epsVar, min_samples=min_samp).fit_predict(transformed)
     avg_vs_min_Laptime["clustering"] = clustering
     avg_vs_min_Laptime["clustering"] = avg_vs_min_Laptime["clustering"].astype(str)
+    if clusterNames is not None:
+        avg_vs_min_Laptime["Pengelompokan"] = avg_vs_min_Laptime["clustering"].replace(
+            avg_vs_min_Laptime["clustering"].unique(), clusterNames
+        )
     return avg_vs_min_Laptime
 
 
@@ -407,12 +411,15 @@ class vizData:
         self.all_laps = getAllTelemetry(session)
         self.circInfo = session.get_circuit_info()
 
-    def clusterAnalysis(self, **kwargs):
-        df = getAvgvMinLaptimeClusters(self.session, **kwargs)
+    def clusterAnalysis(self, clusterNames=None, **kwargs):
+        df = getAvgvMinLaptimeClusters(self.session, clusterNames, **kwargs)
         fig, ax = plt.subplots()
-        sns.scatterplot(
-            data=df, x="avgLap", y="bestLap", hue="clustering", zorder=10, ax=ax
-        )
+        if clusterNames is None:
+            hueName = "clustering"
+        else:
+            hueName = "Pengelompokan"
+
+        sns.scatterplot(data=df, x="avgLap", y="bestLap", hue=hueName, zorder=10, ax=ax)
         texts = [
             ax.annotate(
                 row["Driver"],
@@ -1259,7 +1266,7 @@ class vizDataRace(vizData):
                     alpha=0.2,
                 )
 
-        fig.text(0.5, -0.01, "Umur Ban", rotation=90)
+        fig.text(0.5, -0.01, "Umur Ban")
         fig.text(-0.01, 0.23, "Waktu per Lap dengan koreksi bahan bakar", rotation=90)
 
         stintdf = pits_adjusted[
