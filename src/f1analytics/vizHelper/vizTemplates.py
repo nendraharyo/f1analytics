@@ -994,7 +994,7 @@ class vizDataRace(vizData):
                 )
                 ax.text(
                     group["LapNumber"][0] + 0.45,
-                    32.7,
+                    0,
                     f"{group['Driver'][0]} & {group['Driver'][1]} masuk ke pit",
                     rotation=90,
                     verticalalignment="bottom",
