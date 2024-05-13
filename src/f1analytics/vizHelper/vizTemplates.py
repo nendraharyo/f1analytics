@@ -627,6 +627,20 @@ class vizData:
         fig.tight_layout()
         plt.show()
 
+    def exportData(self, path=r"../../data/processed/"):
+        with pd.ExcelWriter(
+            path + self.session.event.EventName.replace(" ", "") + ".xlsx"
+        ) as writer:
+            data = vars(self)
+            for keys in data.keys():
+                if keys not in ["session", "circInfo"]:
+                    print(f"Processing {keys}...")
+                    data[keys].to_excel(writer, sheet_name=keys, index=False)
+            print("Processing Throttle data...")
+            getThrottle(self.session).to_excel(
+                writer, sheet_name="ThrottleData", index=False
+            )
+
 
 class vizDataQuali(vizData):
     def __init__(self, session):
