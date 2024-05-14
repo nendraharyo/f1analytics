@@ -4,7 +4,7 @@ import requests as rq
 from kafka import KafkaProducer
 
 session = rq.session()
-with open(r"data\interim\f1tfeed.json") as file:
+with open(r"data/interim/f1tfeed.json") as file:
     cookies = json.load(file)
 
 cookie_props = [
