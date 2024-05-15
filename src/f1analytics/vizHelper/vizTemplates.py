@@ -632,10 +632,14 @@ class vizData:
             path + self.session.event.EventName.replace(" ", "") + ".xlsx"
         ) as writer:
             data = vars(self)
-            for keys in data.keys():
+            for keys in data.keys():  # keys
                 if keys not in ["session", "circInfo"]:
                     print(f"Processing {keys}...")
-                    data[keys].to_excel(writer, sheet_name=keys, index=False)
+                    df = data[keys]
+                    for col in df.columns:
+                        if df[col].dtype == "<m8[ns]":
+                            df[col] = df[col].apply(lambda x: x.total_seconds())
+                    df.to_excel(writer, sheet_name=keys, index=False)
             print("Processing Throttle data...")
             getThrottle(self.session).to_excel(
                 writer, sheet_name="ThrottleData", index=False
