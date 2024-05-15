@@ -15,6 +15,7 @@ from matplotlib.ticker import PercentFormatter
 from sklearn.cluster import DBSCAN
 from sklearn.preprocessing import StandardScaler
 
+fastf1.logger.set_log_level("ERROR")
 # mendefinisikan fungsi
 
 
@@ -826,6 +827,7 @@ class vizDataRace(vizData):
         plt.show()
 
     def TyrePace(self, drvList):
+        # TODO: bikin jadi menyesuaikan compound yg tersedia
         pits = getPits(self.session_corrected, drvList)
         pits_adjusted = pits[
             (pits["IsAccurate"] == True)
