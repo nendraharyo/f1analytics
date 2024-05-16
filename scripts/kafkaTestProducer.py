@@ -41,6 +41,6 @@ while True:
         .replace("\r", "")
         .replace("//", "")
     )
-    if "ntt_f" in data:
+    if ("ntt_f" in data) & ("ntt_f(11,0,[-1,-1,0],[],[]);" not in data):
         producer.send("f1tfeed_raw", data.encode())
 producer.flush()
