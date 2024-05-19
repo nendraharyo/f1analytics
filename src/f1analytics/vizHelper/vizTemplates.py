@@ -1439,3 +1439,73 @@ class vizDataRace(vizData):
         ax.set_ylim(250, 365)
         fig.suptitle("Kecepatan yang didapatkan saat menggunakan DRS")
         plt.show()
+
+    def distancePlot(self, drv, lapsrange, drszones, drszones_dist):
+        # menampilkan jarak VER dengan NOR 2 lap setelah SC yang tidak berada dibawah threshold DRS
+        test = self.all_laps[
+            (self.all_laps["drvName"] == drv)
+            & (self.all_laps["LapNumber"].isin(lapsrange))
+        ][
+            [
+                "DistanceToDriverAhead",
+                "LapNumber",
+                "RelativeDistance",
+                "Distance",
+                "SessionTime",
+                "Time",
+            ]
+        ]
+        # 90m after t8
+        # 70m+t16
+        # 15+t17
+        # test=test.merge(miamigp_r.get_circuit_info().corners, on='Distance')
+        actZone = self.session.get_circuit_info().corners
+        actZone = actZone[actZone["Number"].isin(drszones)]
+        actZone["drs"] = actZone["Distance"] + drszones_dist
+        fig, ax = plt.subplots(figsize=(11, 7))
+        sns.lineplot(
+            data=test,
+            x="Distance",
+            y="DistanceToDriverAhead",
+            hue="LapNumber",
+            ax=ax,
+            palette=sns.color_palette("crest", as_cmap=True),
+        )
+        for i, rows in actZone.iterrows():
+            ax.axvline(rows["drs"], color="purple")
+            ax.text(
+                rows["drs"] + 50,
+                0,
+                "Zona Deteksi DRS",
+                rotation=90,
+                fontsize=8.5,
+                verticalalignment="bottom",
+            )
+        ax.axhline(60, color="blueviolet")
+        ax.text(-250, 50, "Threshold DRS", ha="left")
+        ax.set_ylim(0, 300)
+        ax.set_ylabel("Jarak ke Norris (meter)")
+        ax.set_xlabel("Tikungan ke-")
+        ax.set_xticks(self.session.get_circuit_info().corners["Distance"])
+        ax.set_xticklabels(self.session.get_circuit_info().corners["Number"])
+
+    # ax.axvline(rows['Distance'],color='yellow')
+    def violin(self):
+        dataset = self.session_corrected[["Driver", "LapTime", "LapNumber"]]
+        fig, ax = plt.subplots(figsize=(14, 7))
+        sns.violinplot(
+            data=dataset[dataset["LapTime"] < timedelta(minutes=1, seconds=36)],
+            x="Driver",
+            y="LapTime",
+            ax=ax,
+            width=2,
+            inner="quart",
+            color="yellow",
+        )
+        sns.swarmplot(
+            data=dataset[dataset["LapTime"] < timedelta(minutes=1, seconds=36)],
+            x="Driver",
+            y="LapTime",
+            ax=ax,
+            hue="LapNumber",
+        )
