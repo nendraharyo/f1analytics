@@ -366,7 +366,9 @@ def getThrottle(session):
 
 
 def getPits(laps, drvList):
-    laps_adjusted = laps[(laps["Driver"].isin(drvList)) & (laps["LapNumber"] > 1)]
+    laps_adjusted = laps[laps["LapNumber"] > 1]
+    if drvList is not None:
+        laps_adjusted = laps[laps["Driver"].isin(drvList)]
     return laps_adjusted
 
 
@@ -449,7 +451,12 @@ class vizData:
         # labels = list(colors.keys())[::-1]
         # handles = [plt.Rectangle((0, 0), 1, 1, color=colors[label]) for label in labels]
 
-    def trackDominance(self, drvList=None):
+    def trackDominance(
+        self,
+        xstart,
+        ystart,
+        drvList=None,
+    ):
         # TODO:start direction rotation
         circRot = self.circInfo.rotation
         lapsTelem = self.all_laps
@@ -471,7 +478,7 @@ class vizData:
 
         fig, ax = plt.subplots(figsize=(7, 5.5))
 
-        fig.suptitle(f"Kualifikasi {self.session.name} - Track Dominance Semua Laps")
+        fig.suptitle(f"{self.session.name} - Track Dominance Semua Laps")
 
         ax.add_collection(lc_comp)
         ax.axis("equal")
@@ -518,7 +525,13 @@ class vizData:
                 color="white",
             )
         plt.arrow(
-            x[0], y[0] + 300, +900, -550, color="white", shape="right", head_width=500
+            x[0],
+            y[0] + 300,
+            xstart,
+            ystart,
+            color="white",
+            shape="right",
+            head_width=500,
         )
         bounds = [
             i * 10 for i in (listProp.sort_values("proportion")["proportion"].to_list())
@@ -1078,11 +1091,11 @@ class vizDataRace(vizData):
         axs.set_xlabel("pembalap")
         axs.invert_yaxis()
 
-    def LinePlot(self, drvList=None):
+    def LinePlot(self, drvList=None, sec_under=40):
         if drvList is None:
             drvList = self.session.drivers
         laps_corrected_lim = self.session_corrected[
-            self.session_corrected["LapTime"] < timedelta(minutes=1, seconds=35)
+            self.session_corrected["LapTime"] < timedelta(minutes=1, seconds=sec_under)
         ]
         fig, axs = plt.subplots(figsize=(13, 7))
         cacheTeam = []
