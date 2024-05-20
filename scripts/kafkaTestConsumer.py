@@ -33,4 +33,5 @@ for message in consumer:
             print("sudah ada sinyal checkered flag")
             break
     except:
+        print("error")
         continue
