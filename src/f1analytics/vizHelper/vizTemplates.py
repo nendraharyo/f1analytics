@@ -110,12 +110,23 @@ def getAvgvMinLaptimeClusters(session, clusterNames=None, epsVar=0.44, min_samp=
     return avg_vs_min_Laptime
 
 
-def gettrackSpeedSegmentsDataQuali(laps_telem, session, segments=25):
+def gettrackSpeedSegmentsDataQuali(
+    laps_telem,
+    session,
+    mode="fastest",
+    segments=25,
+):
     laps_telem.loc[:, "miniSect"] = np.round(
         laps_telem["RelativeDistance"].to_numpy() / (1 / segments)
     )
 
     speed_segments = laps_telem[["Speed", "miniSect", "drvName", "teamColor"]]
+    if mode == "average":
+        speed_segments = (
+            speed_segments.groupby(["miniSect", "drvName", "teamColor"])
+            .mean()
+            .reset_index()
+        )
 
     dfSpeed = (
         speed_segments.sort_values("Speed")
@@ -451,18 +462,15 @@ class vizData:
         # labels = list(colors.keys())[::-1]
         # handles = [plt.Rectangle((0, 0), 1, 1, color=colors[label]) for label in labels]
 
-    def trackDominance(
-        self,
-        xstart,
-        ystart,
-        drvList=None,
-    ):
+    def trackDominance(self, xstart, ystart, drvList=None, mode="fastest"):
         # TODO:start direction rotation
         circRot = self.circInfo.rotation
         lapsTelem = self.all_laps
         if drvList is not None:
             lapsTelem = lapsTelem[lapsTelem["drvName"].isin(drvList)]
-        listProp, single_lap = gettrackSpeedSegmentsDataQuali(lapsTelem, self.session)
+        listProp, single_lap = gettrackSpeedSegmentsDataQuali(
+            lapsTelem, self.session, mode=mode
+        )
         x, y = rotate_matrix(single_lap["X"].values, single_lap["Y"].values, circRot)
 
         listProp.sort_values("proportion", inplace=True)
