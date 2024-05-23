@@ -82,12 +82,18 @@ def getFastestTelemetry(session):
     return fastest
 
 
-def getAvgvMinLaptimeClusters(session, clusterNames=None, epsVar=0.44, min_samp=4):
+def getAvgvMinLaptimeClusters(
+    session, clusterNames=None, mode="avg", epsVar=0.44, min_samp=4
+):
     avg_vs_min_Laptime = (
         session.laps.pick_accurate()
         .pick_wo_box()[["LapTime", "Driver", "DriverNumber"]]
         .groupby(["Driver", "DriverNumber"])
-        .agg(bestLap=("LapTime", "min"), avgLap=("LapTime", "mean"))
+        .agg(
+            bestLap=("LapTime", "min"),
+            avgLap=("LapTime", "mean"),
+            medLap=("LapTime", "median"),
+        )
         .reset_index()
     )
     avg_vs_min_Laptime["color"] = avg_vs_min_Laptime["DriverNumber"].apply(
@@ -97,8 +103,11 @@ def getAvgvMinLaptimeClusters(session, clusterNames=None, epsVar=0.44, min_samp=
     scaler = StandardScaler()
     avg_vs_min_Laptime["bestLapSecs"] = avg_vs_min_Laptime["bestLap"].dt.total_seconds()
     avg_vs_min_Laptime["avgLapSecs"] = avg_vs_min_Laptime["avgLap"].dt.total_seconds()
-
-    train = avg_vs_min_Laptime[["bestLapSecs", "avgLapSecs"]]
+    avg_vs_min_Laptime["medLapSecs"] = avg_vs_min_Laptime["medLap"].dt.total_seconds()
+    if mode == "avg":
+        train = avg_vs_min_Laptime[["bestLapSecs", "avgLapSecs"]]
+    else:
+        train = avg_vs_min_Laptime[["bestLapSecs", "medLapSecs"]]
     transformed = scaler.fit_transform(train)
     clustering = DBSCAN(eps=epsVar, min_samples=min_samp).fit_predict(transformed)
     avg_vs_min_Laptime["clustering"] = clustering
@@ -322,6 +331,7 @@ def getSessionTyreUsage(session_corrected):
 
 
 def getThrottle(session):
+    # TODO: repair the label
     lap = []
     drivers = []
     throttleDuration = []
@@ -341,7 +351,7 @@ def getThrottle(session):
             index = 0
             isFullThrottle = []
             for i, row in test.iterrows():
-                if i == 2 and row["Throttle"] >= 98:
+                if i <= 2 and row["Throttle"] >= 98:
                     index += 1
                     isFullThrottle.append(index)
                 elif row["Throttle"] >= 98 and test["Throttle"][i - 1] < 98:
@@ -425,19 +435,23 @@ class vizData:
         self.all_laps = getAllTelemetry(session)
         self.circInfo = session.get_circuit_info()
 
-    def clusterAnalysis(self, clusterNames=None, **kwargs):
-        df = getAvgvMinLaptimeClusters(self.session, clusterNames, **kwargs)
+    def clusterAnalysis(self, clusterNames=None, mode="average", **kwargs):
+        df = getAvgvMinLaptimeClusters(self.session, clusterNames, mode, **kwargs)
         fig, ax = plt.subplots()
         if clusterNames is None:
             hueName = "clustering"
         else:
             hueName = "Pengelompokan"
+        if mode != "avg":
+            xVar = "medLap"
+        else:
+            xVar = "avgLap"
 
-        sns.scatterplot(data=df, x="avgLap", y="bestLap", hue=hueName, zorder=10, ax=ax)
+        sns.scatterplot(data=df, x=xVar, y="bestLap", hue=hueName, zorder=10, ax=ax)
         texts = [
             ax.annotate(
                 row["Driver"],
-                [row["avgLap"], row["bestLap"]],
+                [row[xVar], row["bestLap"]],
                 zorder=10,
                 color="lightyellow",
             )
