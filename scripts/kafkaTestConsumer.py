@@ -18,7 +18,8 @@ for message in consumer:
     # print(message.value)
     try:
         tlmy_df, weather_df, race_df = converter.convert_ntt(message.value.decode())
-        if race_df["flag_status"] != "6":
+        # print(race_df.flag_status)
+        if race_df["flag_status"][0] != "6":
             tlmy_df["timestamp"] = pd.to_datetime(tlmy_df["timestamp"], unit="ms")
             weather_df["timestamp"] = pd.to_datetime(weather_df["timestamp"], unit="ms")
             race_df["timestamp"] = pd.to_datetime(race_df["timestamp"], unit="ms")
@@ -26,12 +27,13 @@ for message in consumer:
             tlmy_df = tlmy_df.set_index("timestamp")
             weather_df_df = weather_df.set_index("timestamp")
             race_df = race_df.set_index("timestamp")
-            tlmy_df.to_sql("telemetry_imola_race_2024", conn, if_exists="append")
-            weather_df.to_sql("weather_imola_race_2024", conn, if_exists="append")
-            race_df.to_sql("racestats_imola_race_2024", conn, if_exists="append")
+            tlmy_df.to_sql("telemetry_monaco_race_2024", conn, if_exists="append")
+            weather_df.to_sql("weather_monaco_race_2024", conn, if_exists="append")
+            race_df.to_sql("racestats_monaco_race_2024", conn, if_exists="append")
         else:
             print("sudah ada sinyal checkered flag")
             break
-    except:
+    except Exception as e:
         print("error")
+        print(e)
         continue
