@@ -435,7 +435,7 @@ class vizData:
         self.all_laps = getAllTelemetry(session)
         self.circInfo = session.get_circuit_info()
 
-    def clusterAnalysis(self, clusterNames=None, mode="average", **kwargs):
+    def clusterAnalysis(self, clusterNames=None, mode="avg", **kwargs):
         df = getAvgvMinLaptimeClusters(self.session, clusterNames, mode, **kwargs)
         fig, ax = plt.subplots()
         if clusterNames is None:
