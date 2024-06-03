@@ -25,6 +25,19 @@ def getDuration(x):  # mendapatkan durasi dari poin A ke B
     return max - min
 
 
+def smooth(
+    scalars: list[float], weight: float
+) -> list[float]:  # Weight between 0 and 1
+    last = scalars[0]  # First value in the plot (first timestep)
+    smoothed = list()
+    for point in scalars:
+        smoothed_val = last * weight + (1 - weight) * point  # Calculate smoothed value
+        smoothed.append(smoothed_val)  # Save it
+        last = smoothed_val  # Anchor the last smoothed value
+
+    return smoothed
+
+
 def rotate_matrix(
     x, y, angle, x_shift=0, y_shift=0, units="DEGREES"
 ):  # melakukan proses rotasi matriks numpy
@@ -1030,7 +1043,7 @@ class vizDataRace(vizData):
                 linestyle=linestyleVar,
             )
             pits_grouped = pits.groupby("LapNumber")
-
+        """
         for i, group in pits_grouped:
             group.reset_index(inplace=True)
             if len(group["Driver"]) == 2:
@@ -1071,7 +1084,7 @@ class vizDataRace(vizData):
                         verticalalignment="bottom",
                         fontsize=6.5,
                     )
-
+        """
         fig.suptitle(
             "Seberapa Lama Para Pembalap Menginjak Pedal Gas secara Penuh per Lap?"
         )
