@@ -1557,3 +1557,27 @@ class vizDataRace(vizData):
             ax=ax,
             hue="LapNumber",
         )
+
+    def deltaTime(
+        self, drvList: list, drvRef: str, lapRange: list = None, smoothVar=0.999
+    ):
+        dts = {}
+        for drv in drvList:
+            try:
+                dts[drv] = fastf1.utils.delta_time(
+                    self.session.laps.pick_laps(lapRange).pick_driver(drvRef),
+                    self.session.laps.pick_laps(lapRange).pick_driver(drv),
+                )
+            except:
+                continue
+        fig, ax = plt.subplots(figsize=(15, 7))
+
+        for drv in dts:
+            ax.plot(
+                dts[drv][1]["Distance"],
+                smooth(dts[drv][0], smoothVar),
+                color="#" + self.session.get_driver(drv).TeamColor,
+            )
+            ax.set_ylabel("Pace Gap To Leader")
+        ax.invert_yaxis()
+        plt.show()
