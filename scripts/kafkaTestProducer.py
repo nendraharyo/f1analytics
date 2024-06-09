@@ -33,6 +33,7 @@ for c in cookiejar:
 
 producer = KafkaProducer(bootstrap_servers=["192.168.1.77:9094"])
 print("Harvesting...")
+flag = None
 while True:
     data = (
         session.get(url=r"https://f1.tfeed.net/tt.js")
@@ -43,4 +44,11 @@ while True:
     )
     if ("ntt_f" in data) & ("ntt_f(11,0,[-1,-1,0],[],[]);" not in data):
         producer.send("f1tfeed_raw", data.encode())
+        if flag != "df":
+            print("data found! appending..")
+            flag = "df"
+    else:
+        if flag != "na":
+            print("no data")
+            flag = "na"
 producer.flush()
