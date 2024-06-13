@@ -6,11 +6,12 @@ import types
 from functools import partial
 
 import typer
-from dataimporter.message_handler import handle_message
 from fastf1.livetiming.client import SignalRClient
 from fastf1.utils import to_datetime
 from influxdb_client import InfluxDBClient
 from influxdb_client.client.write_api import SYNCHRONOUS
+
+from f1analytics.tools.message_handler import handle_message
 
 log = logging.getLogger(__name__)
 log.setLevel(logging.INFO)
