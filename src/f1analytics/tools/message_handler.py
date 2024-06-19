@@ -131,13 +131,13 @@ def extract_TimingData(value, datetime):
         result = get_LastLapTime_from_TimingData(value)
         if len(result) > 0:
             for r in result:
-                driverNo, speed = r
+                driverNo, lastlaptime = r
                 driverName = driver_no_to_name(driverNo)
-                log.info("Last lap: %s - %s", driverName, speed)
+                log.info("Last lap: %s - %s", driverName, lastlaptime)
 
                 point = (
                     Point("lastLapTime")
-                    .field("LastLapTime", speed)
+                    .field("LastLapTime", lastlaptime)
                     .tag("driver", driverName)
                     .time(datetime, WritePrecision.NS)
                 )
