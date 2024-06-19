@@ -135,6 +135,14 @@ def extract_TimingData(value, datetime):
                 driverName = driver_no_to_name(driverNo)
                 log.info("Last lap: %s - %s", driverName, lastlaptime)
 
+                # PoC point as dict
+                point = {
+                    "LastLapTime": lastlaptime,
+                    "driver": driverName,
+                    "timestamp": datetime,
+                }
+
+                # pls comment all of this
                 point = (
                     Point("lastLapTime")
                     .field("LastLapTime", lastlaptime)
@@ -150,6 +158,13 @@ def extract_TimingData(value, datetime):
                 driverNo, gap = r
                 driverName = driver_no_to_name(driverNo)
                 log.info("Gap to Leader: %s - %s", driverName, gap)
+
+                point = {
+                    "GapToLeader": interval_to_timespan(gap),
+                    "GapToLeaderHumanReadable": interval_human_readable(gap),
+                    "driver": driverName,
+                    "timestamp": datetime,
+                }
 
                 point = (
                     Point("gapToLeader")
@@ -168,6 +183,11 @@ def extract_TimingData(value, datetime):
                 driverName = driver_no_to_name(driverNo)
                 log.info("Gap to Leader: %s - %s", driverName, interval)
 
+                point = {
+                    "IntervalToPositionAhead": interval,
+                    "driver": driverName,
+                    "timestamp": datetime,
+                }
                 point = (
                     Point("intervalToPositionAhead")
                     .field("IntervalToPositionAhead", interval)
@@ -183,7 +203,11 @@ def extract_TimingData(value, datetime):
                 driverNo, lapNumber = r
                 driverName = driver_no_to_name(driverNo)
                 log.info("NumberOfLaps: %s - %s", driverName, lapNumber)
-
+                point = {
+                    "NumberOfLaps": lapNumber,
+                    "driver": driverName,
+                    "timestamp": datetime,
+                }
                 point = (
                     Point("numberOfLaps")
                     .field("NumberOfLaps", lapNumber)
@@ -200,6 +224,7 @@ def extract_TimingData(value, datetime):
                 driverName = driver_no_to_name(driverNo)
                 log.info("Speed trap: %s - %s", driverName, speed)
 
+                point = {"Speed": speed, "driver": driverName, "timestamp": datetime}
                 point = (
                     Point("speedTrap")
                     .field("Speed", speed)
@@ -218,6 +243,7 @@ def extract_RaceControlMessages(value, datetime):
         rcm = list(value["Messages"].values())[0]["Message"]
         log.info("RaceControlMessage: %s", rcm)
 
+        point = {"raceControlMessage": rcm, "timestamp": datetime}
         point = (
             Point("raceControlMessage")
             .field("Message", rcm)
@@ -233,7 +259,16 @@ def extract_WeatherData(value, datetime):
     try:
         w = value
         log.info("WeatherData: %s", w)
-
+        point = {
+            "AirTemp": float(w["AirTemp"]),
+            "Humidity": float(w["Humidity"]),
+            "Pressure": float(w["Pressure"]),
+            "Rainfall": float(w["Rainfall"]),
+            "TrackTemp": float(w["TrackTemp"]),
+            "WindDirection": float(w["WindDirection"]),
+            "WindSpeed": float(w["WindSpeed"]),
+            "timestamp": datetime,
+        }
         point = (
             Point("weatherData")
             .field("AirTemp", float(w["AirTemp"]))
