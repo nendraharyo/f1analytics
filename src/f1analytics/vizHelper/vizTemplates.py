@@ -596,7 +596,7 @@ class vizData:
         # listProp['bounds']=boundsx
         labels = []
         for j, k in listProp.iterrows():
-            label = f'{k["drvName"]} ({round(k["proportion"]*100,2)}%)'
+            label = f'{k["drvName"]} ({round(k["proportion"] * 100, 2)}%)'
             labels.append(label)
 
         cbar.set_ticklabels(labels)  # ambil driver name dari variabel!!!
@@ -1324,6 +1324,10 @@ class vizDataRace(vizData):
                 ax[i].set_title("SOFT", color="red", fontsize=10)
             elif group[0] == "MEDIUM":
                 ax[i].set_title("MEDIUM", color="yellow", fontsize=10)
+            elif group[0] == "INTERMEDIATE":
+                ax[i].set_title("INTERMEDIATE", color="limegreen", fontsize=10)
+            elif group[0] == "WET":
+                ax[i].set_title("WET", color="dodgerblue", fontsize=10)
             else:
                 ax[i].set_title("HARD", fontsize=10)
             for index, row in group[1].iterrows():
