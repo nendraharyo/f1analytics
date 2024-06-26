@@ -1112,6 +1112,7 @@ class vizDataRace(vizData):
                 .sort_values("LapTime")
                 .index
             )
+            titleType = "Rata - Rata"
         else:
             datasetOrder = (
                 df[["Driver", "LapTime"]]
@@ -1120,6 +1121,7 @@ class vizDataRace(vizData):
                 .sort_values("LapTime")
                 .index
             )
+            titleType = "Median"
         sns.boxplot(
             data=self.session.laps.pick_wo_box(),
             x="Driver",
@@ -1141,7 +1143,7 @@ class vizDataRace(vizData):
         lines = axs.lines
         for i in lines:
             i.set_color("w")
-        axs.set_title("Konsistensi Pace")
+        axs.set_title(f"Konsistensi Pace - diurutkan Berdasarkan {titleType}")
         axs.set_xlabel("pembalap")
         axs.invert_yaxis()
 
@@ -1582,7 +1584,7 @@ class vizDataRace(vizData):
         )
 
     def deltaTime(
-        self, drvList: list, drvRef: str, lapRange: list = None, smoothVar=0.999
+        self, drvList: list, drvRef: str, lapRange: list = None, smoothVar=0.9
     ):
         dts = {}
         for drv in drvList:
