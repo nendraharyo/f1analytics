@@ -1094,7 +1094,7 @@ class vizDataRace(vizData):
 
         ax.legend()
 
-    def BoxPlot(self):
+    def BoxPlot(self, sort_by="median"):
         teamsColor = {
             row["Team"]: "#" + self.session.get_driver(row["Driver"]).TeamColor
             for i, row in pd.DataFrame(
@@ -1104,6 +1104,22 @@ class vizDataRace(vizData):
 
         fig, axs = plt.subplots(figsize=(13, 7))
         df = self.session.laps.pick_wo_box()
+        if sort_by != "median":
+            datasetOrder = (
+                df[["Driver", "LapTime"]]
+                .groupby("Driver")
+                .mean()
+                .sort_values("LapTime")
+                .index
+            )
+        else:
+            datasetOrder = (
+                df[["Driver", "LapTime"]]
+                .groupby("Driver")
+                .median()
+                .sort_values("LapTime")
+                .index
+            )
         sns.boxplot(
             data=self.session.laps.pick_wo_box(),
             x="Driver",
@@ -1113,11 +1129,14 @@ class vizDataRace(vizData):
             palette=teamsColor,
             ax=axs,
             showfliers=False,
-            order=df[["Driver", "LapTime"]]
-            .groupby("Driver")
-            .median()
-            .sort_values("LapTime")
-            .index,
+            showmeans=True,
+            order=datasetOrder,
+            meanprops={
+                "marker": "o",
+                "markerfacecolor": "white",
+                "markeredgecolor": "black",
+                "markersize": "8",
+            },
         )
         lines = axs.lines
         for i in lines:
