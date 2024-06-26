@@ -513,7 +513,9 @@ class vizData:
 
         fig, ax = plt.subplots(figsize=(7, 5.5))
 
-        fig.suptitle(f"{self.session.name} - Track Dominance Semua Laps")
+        fig.suptitle(
+            f"{self.session.name} - Track Dominance Semua Laps\n{', '.join(drvList)}"
+        )
 
         ax.add_collection(lc_comp)
         ax.axis("equal")
@@ -1193,7 +1195,7 @@ class vizDataRace(vizData):
                 )
             # if '4' in group['TrackStatus']:
             # axs.text(group['LapNumber'].min(),((ymax-ymin)/2)+ymin,'SC',c='black',rotation=90,horizontalalignment='left',fontsize=45)
-        axs.set_title("Grafik Laptime per Lap")
+        axs.set_title(f"Grafik Laptime per Lap \n {', '.join(drvList)}")
         axs.set_ylabel("waktu")
 
         axs.set_ylabel("waktu")
@@ -1412,7 +1414,7 @@ class vizDataRace(vizData):
                 label=labelVar,
             )
 
-        fig.suptitle("     Degradasi Ban", fontsize=25)
+        fig.suptitle(f"     Degradasi Ban \n    {', '.join(drvList)}", fontsize=25)
 
         fig.tight_layout()
         fig.legend()
