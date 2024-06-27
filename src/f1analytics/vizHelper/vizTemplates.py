@@ -478,7 +478,7 @@ class vizData:
         ax.set_xlabel("Rata - Rata Lap")
         ax.set_ylabel("Lap terbaik")
         # props = dict(boxstyle="round", facecolor="w", alpha=0.5)
-
+        fig.suptitle(f"Clustering pembalap pada sesi {self.session.name}")
         adjust_text(texts)
         # colors = (
         #    self.fastest_quali[["teamName", "teamColor"]]
@@ -567,7 +567,6 @@ class vizData:
             xstart,
             ystart,
             color="white",
-            shape="right",
             head_width=500,
         )
         bounds = [
