@@ -489,7 +489,9 @@ class vizData:
         # labels = list(colors.keys())[::-1]
         # handles = [plt.Rectangle((0, 0), 1, 1, color=colors[label]) for label in labels]
 
-    def trackDominance(self, xstart=100, ystart=100, drvList=None, mode="fastest"):
+    def trackDominance(
+        self, xstart=100, ystart=100, arrowShape="left", drvList=None, mode="fastest"
+    ):
         # TODO:start direction rotation
         circRot = self.circInfo.rotation
         lapsTelem = self.all_laps
@@ -566,6 +568,7 @@ class vizData:
             y[0] + 300,
             xstart,
             ystart,
+            shape=arrowShape,
             color="white",
             head_width=500,
         )
