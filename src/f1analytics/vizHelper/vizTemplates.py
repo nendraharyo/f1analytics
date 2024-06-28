@@ -1152,8 +1152,13 @@ class vizDataRace(vizData):
         axs.invert_yaxis()
 
     def LinePlot(self, drvList=None, sec_under=40):
+        # TODO: error kalo query semua driver (kosongan)
         if drvList is None:
             drvList = self.session.drivers
+            subtitle = "Semua Driver"
+        else:
+            subtitle = ", ".join(drvList)
+
         laps_corrected_lim = self.session_corrected[
             self.session_corrected["LapTime"] < timedelta(minutes=1, seconds=sec_under)
         ]
@@ -1197,7 +1202,7 @@ class vizDataRace(vizData):
                 )
             # if '4' in group['TrackStatus']:
             # axs.text(group['LapNumber'].min(),((ymax-ymin)/2)+ymin,'SC',c='black',rotation=90,horizontalalignment='left',fontsize=45)
-        axs.set_title(f"Grafik Laptime per Lap \n {', '.join(drvList)}")
+        axs.set_title(f"Grafik Laptime per Lap \n {subtitle}")
         axs.set_ylabel("waktu")
 
         axs.set_ylabel("waktu")
