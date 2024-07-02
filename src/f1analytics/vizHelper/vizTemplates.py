@@ -1565,7 +1565,7 @@ class vizDataRace(vizData):
             )
         ax.axhline(60, color="blueviolet")
         ax.text(-250, 50, "Threshold DRS", ha="left")
-        ax.set_ylim(0, 300)
+        # ax.set_ylim(0, 120)
         ax.set_ylabel("Jarak ke Norris (meter)")
         ax.set_xlabel("Tikungan ke-")
         ax.set_xticks(self.session.get_circuit_info().corners["Distance"])
